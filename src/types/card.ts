@@ -8,4 +8,5 @@ export interface Card {
   ability?: string;
   trouble: boolean;
   buyable?: boolean;
+  isStar?: boolean;
 }

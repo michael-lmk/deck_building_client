@@ -1,21 +1,21 @@
-import React from "react";
-import { Card } from "../types/card";
+import React from 'react';
+import { Card } from '../types/card';
 
-interface HandProps {
+interface DeckProps {
   deck: Card[];
 }
 
-const Deck: React.FC<HandProps> = ({ deck }) => {
+const Deck: React.FC<DeckProps> = ({ deck }) => {
   return (
     <div>
-      <h3>Ta main</h3>
-      <ul>
-        {deck.map((c) => (
-          <li key={c.id}>
-            {c.name} - Popularité: {c.popularity} - Argent: {c.money}
-          </li>
+      <h3>Your Deck</h3>
+      <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+        {deck.map((card, index) => (
+          <div key={index} style={{ border: '1px solid black', margin: '5px', padding: '5px' }}>
+            <p>{card.name}</p>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };

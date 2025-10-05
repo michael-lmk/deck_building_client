@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card } from "../types/card";
-import Market from "./Market";
-import Hand from "./Deck";
+import Party from "./Party";
+import { socket } from "../socket";
+import DeckView from "./DeckView";
 
 interface RoomProps {
   roomId: string;
@@ -12,108 +12,138 @@ interface Player {
   socketId: string;
   name: string;
   ready: boolean;
-  hand: Card[];
 }
 
-const TURN_TIME = 15000; // 15 secondes
+interface PartyState {
+  guestsInHouse: Card[];
+  houseCapacity: number;
+  isActive: boolean;
+}
 
 const Room: React.FC<RoomProps> = ({ roomId }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [market, setMarket] = useState<Card[]>([]);
-  const [hand, setHand] = useState<Card[]>([]);
-  const [yourTurn, setYourTurn] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [party, setParty] = useState<PartyState | null>(null);
+  const [yourTurn, setYourTurn] = useState(false);
   const [ready, setReady] = useState(false);
   const [partyResults, setPartyResults] = useState<{ popularity: number; money: number } | null>(null);
+  const [gameOver, setGameOver] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Initialiser la socket
-    const s: Socket = io("http://localhost:3005");
-    setSocket(s);
+  // State for the new deck view
+  const [showDeck, setShowDeck] = useState(false);
+  const [deck, setDeck] = useState<Card[]>([]);
+  const [discard, setDiscard] = useState<Card[]>([]);
 
-    // Listeners
-    s.on("connect", () => {
-      console.log("Connected", s.id);
-      s.emit("joinRoom", { roomId, name: `Player-${(s.id ?? "unknown").slice(0, 4)}` });
-    });
-
-    s.on("joinedRoom", (data: any) => {
-      setHand(data.hand);
-    });
-
-    s.on("updatePlayers", (data: Player[]) => {
-      setPlayers(data);
-    });
-
-    s.on("startGame", (data: { market: Card[] }) => {
-      setMarket(data.market);
-      setReady(false);
-    });
-
-    s.on("yourTurn", (data: { market: Card[] }) => {
-      setMarket(data.market);
-      setYourTurn(true);
-    });
-
-    s.on("handUpdate", (handData: Card[]) => {
-      setHand(handData);
-    });
-
-    s.on("marketUpdate", (marketData: Card[]) => {
-      setMarket(marketData);
-    });
-
-    s.on("partyResults", (results) => {
-      setPartyResults(results);
-      setYourTurn(false);
-    });
-
-    s.on("partyStopped", (data) => {
-      alert(data.reason);
-      setYourTurn(false);
-    });
-
-    // Fonction de nettoyage pour useEffect
-    return () => {
-      s.disconnect();
-    };
+  const onConnect = useCallback(() => {
+    console.log('Connected!', socket.id);
+    socket.emit("joinRoom", { roomId, name: `Player-${(socket.id ?? "unknown").slice(0, 4)}` });
   }, [roomId]);
 
-  // Timer automatique pour passer le tour
-  useEffect(() => {
-    if (!yourTurn) return;
-    const timer = setTimeout(() => {
-      alert("Temps écoulé ! Tour passé automatiquement.");
-      socket?.emit("passTurn", { roomId });
-      setYourTurn(false);
-    }, TURN_TIME);
+  const onDisconnect = useCallback(() => {
+    console.log('Disconnected');
+  }, []);
 
-    return () => clearTimeout(timer);
-  }, [yourTurn, socket, roomId]);
+  const onUpdatePlayers = useCallback((players: Player[]) => setPlayers(players), []);
+  const onStartGame = useCallback(() => setReady(false), []);
+
+  const onYourTurn = useCallback((data: { party: PartyState, deck: Card[], discard: Card[] }) => {
+    console.log('Received yourTurn event', data);
+    setParty(data.party);
+    setDeck(data.deck);
+    setDiscard(data.discard);
+    setPartyResults(null);
+    setYourTurn(true);
+  }, []);
+
+  const onPartyUpdate = useCallback((guests: Card[]) => {
+    setParty(prevParty => prevParty ? { ...prevParty, guestsInHouse: guests } : null);
+  }, []);
+
+  const onPartyBusted = useCallback((data: { reason: string }) => {
+    alert(`Busted! ${data.reason}`);
+    setYourTurn(false);
+  }, []);
+
+  const onPartyResults = useCallback((results: { popularity: number; money: number }) => {
+    setPartyResults(results);
+    setYourTurn(false);
+  }, []);
+
+  const onDeckStateUpdated = useCallback((data: { deck: Card[], discard: Card[] }) => {
+    setDeck(data.deck);
+    setDiscard(data.discard);
+  }, []);
+
+  const onGameOver = useCallback((data: { winner: string }) => {
+    setGameOver(data.winner);
+    setYourTurn(false);
+  }, []);
+
+  useEffect(() => {
+    socket.connect();
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on("updatePlayers", onUpdatePlayers);
+    socket.on("startGame", onStartGame);
+    socket.on("yourTurn", onYourTurn);
+    socket.on("partyUpdate", onPartyUpdate);
+    socket.on("partyBusted", onPartyBusted);
+    socket.on("partyResults", onPartyResults);
+    socket.on("deckStateUpdated", onDeckStateUpdated);
+    socket.on("gameOver", onGameOver);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off("updatePlayers", onUpdatePlayers);
+      socket.off("startGame", onStartGame);
+      socket.off("yourTurn", onYourTurn);
+      socket.off("partyUpdate", onPartyUpdate);
+      socket.off("partyBusted", onPartyBusted);
+      socket.off("partyResults", onPartyResults);
+      socket.off("deckStateUpdated", onDeckStateUpdated);
+      socket.off("gameOver", onGameOver);
+      socket.disconnect();
+    };
+  }, [roomId, onConnect, onDisconnect, onUpdatePlayers, onStartGame, onYourTurn, onPartyUpdate, onPartyBusted, onPartyResults, onDeckStateUpdated, onGameOver]);
 
   const handleReady = () => {
-    socket?.emit("playerReady", { roomId });
+    socket.emit("playerReady", { roomId });
     setReady(true);
   };
 
-  const handleBuyCard = (cardName: string) => {
+  const handleDrawCard = () => {
     if (yourTurn) {
-      socket?.emit("buyCard", { roomId, cardName });
+      socket.emit("drawCard", { roomId });
+    } else {
+      alert("Ce n'est pas ton tour !");
+    }
+  };
+
+  const handleEndTurn = () => {
+    if (yourTurn) {
+      socket.emit("endParty", { roomId });
       setYourTurn(false);
     } else {
       alert("Ce n'est pas ton tour !");
     }
   };
 
-  const handlePassTurn = () => {
-    if (yourTurn) {
-      socket?.emit("passTurn", { roomId });
-      setYourTurn(false);
-    }
-  };
+  if (gameOver) {
+    return (
+      <div>
+        <h2>Game Over!</h2>
+        <p>Winner: {gameOver}</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
+    <div style={{ padding: 20 }}>
+      <button onClick={() => setShowDeck(!showDeck)} style={{ position: 'absolute', top: 10, right: 10 }}>
+        {showDeck ? 'Hide Deck' : 'Show My Deck'}
+      </button>
+      {showDeck && <DeckView deck={deck} discard={discard} onClose={() => setShowDeck(false)} />}
+
       <h2>Room: {roomId}</h2>
       <h3>Players:</h3>
       <ul>
@@ -123,28 +153,23 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           </li>
         ))}
       </ul>
-      {!ready && <button onClick={handleReady}>Ready</button>}
-
-      {market.length > 0 && (
-        <Market
-          market={market}
-          onBuy={handleBuyCard}
-          disabled={!yourTurn}
-        />
-      )}
-
-      {hand.length > 0 && <Hand deck={hand} />}
+      {!party && !ready && <button onClick={handleReady}>Ready</button>}
 
       {yourTurn && (
-        <div>
-          <p>C'est ton tour !</p>
-          <button onClick={handlePassTurn}>Passer le tour</button>
+        <div style={{ margin: '20px 0', padding: '10px', border: '2px solid green' }}>
+          <h2>C'est ton tour !</h2>
+          <button onClick={handleDrawCard} style={{ marginRight: 10 }}>
+            Piocher une carte
+          </button>
+          <button onClick={handleEndTurn}>Terminer mon tour</button>
         </div>
       )}
 
+      {party && <Party guests={party.guestsInHouse} capacity={party.houseCapacity} />}
+
       {partyResults && (
-        <div>
-          <h3>Résultats de la fête</h3>
+        <div style={{ marginTop: 20 }}>
+          <h3>Résultats du tour</h3>
           <p>Popularité: {partyResults.popularity}</p>
           <p>Argent: {partyResults.money}</p>
         </div>
