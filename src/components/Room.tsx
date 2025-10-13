@@ -16,8 +16,6 @@ interface RoomProps {
   playerName: string;
 }
 
-const URL = "https://reportorial-mirkily-cherry.ngrok-free.dev/";
-
 const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
   const { socket } = useSocket();
   const socketRef = useRef<Socket | null>(socket);
@@ -71,17 +69,16 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
   };
 
   const onYourTurn = () => {
-    setIsYourTurn(true);
-  };
-
-  const onLostRound = (data: any) => {
-    endRound();
-    // setErrorMessage(data.message);
-    // setShowErrorModal(true);
+    setIsYourTurn(() => true);
   };
 
   const onToggleMarket = useCallback(() => {
     setOpenMarket((prev) => !prev);
+  }, []);
+
+  const onToggleLost = useCallback((data: { message: string }) => {
+    setErrorMessage(data?.message);
+    setShowErrorModal((prev) => !prev);
   }, []);
 
   // Envoie au backend
@@ -101,12 +98,19 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
     emit("inviteGuest", { roomId });
   };
 
-  const endRound = () => {
-    setIsYourTurn(false);
-    emit("nextPLayer", { roomId });
+  /**
+   * fermeture du message d'erreur et passe au joueur suivant
+   */
+  const toggleLost = () => {
+    setIsYourTurn(() => false);
+    emit("toggleLost", { roomId });
+    setTimeout(() => {
+      emit("nextPlayer", { roomId });
+    }, 1000);
   };
 
   const toggleMarket = () => {
+    setIsYourTurn(() => false);
     emit("toggleMarket", { roomId });
     setTimeout(() => {
       emit("nextPlayer", { roomId });
@@ -122,8 +126,10 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
     socketRef.current?.on("updateRoom", onUpdateRoom);
     socketRef.current?.on("startGame", onStartGame);
     socketRef.current?.on("yourTurn", onYourTurn);
-    socketRef.current?.on("lostRound", onLostRound);
     socketRef.current?.on("toggleMarket", onToggleMarket);
+
+
+    socketRef.current?.on("lostRound", onToggleLost);
 
     return () => {
       socketRef.current?.off("connect", onConnect);
@@ -132,12 +138,12 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
       socketRef.current?.off("updateRoom", onUpdateRoom);
       socketRef.current?.off("startGame", onStartGame);
       socketRef.current?.off("yourTurn", onYourTurn);
-      socketRef.current?.off("lostRound", onLostRound);
       socketRef.current?.off("toggleMarket", onToggleMarket);
+      socketRef.current?.off("lostRound", onToggleLost);
 
       socketRef.current?.disconnect();
     };
-  }, [roomId, onToggleMarket, onUpdateRoom, onUpdatePlayers, onUpdateRoom]);
+  }, [roomId, onToggleMarket, onUpdateRoom, onUpdatePlayers, onUpdateRoom, onToggleLost]);
 
   return (
     <div style={{ padding: 20, position: "relative", pointerEvents: isStart && !isYourTurn ? "none" : "auto" }}>
@@ -184,15 +190,17 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
         <Modal
           show={showErrorModal}
           onHide={() => setShowErrorModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Error</Modal.Title>
+          <Modal.Header>
+            <Modal.Title>Perdu</Modal.Title>
           </Modal.Header>
           <Modal.Body>{errorMessage}</Modal.Body>
           <Modal.Footer>
             <Button
               variant="secondary"
-              onClick={() => setShowErrorModal(false)}>
-              Close
+              onClick={() => {
+                toggleLost();
+              }}>
+              Terminer
             </Button>
           </Modal.Footer>
         </Modal>
@@ -202,7 +210,6 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
         <Modal
           show={openMarket}
           onHide={() => {
-            endRound();
             toggleMarket();
           }}>
           <Modal.Header closeButton>
@@ -217,7 +224,6 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
             <Button
               variant="secondary"
               onClick={() => {
-                endRound();
                 toggleMarket();
               }}>
               Terminer

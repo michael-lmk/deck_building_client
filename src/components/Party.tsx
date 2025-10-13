@@ -39,7 +39,7 @@ const Party: React.FC<PartyProps> = ({ guests, capacity }) => {
       <h3>
         Party Guests ({guests.length}/{capacity}) | Trouble: {troubleCount}/3
       </h3>
-      <div style={{ display: "flex", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", minHeight: "170px" }}>
         {guests.map((card, index) => (
           <div
             key={index}
