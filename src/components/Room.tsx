@@ -1,14 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Card } from "../types/card";
 import Party from "./Party";
-
-import DeckView from "./DeckView";
 import { Button, Modal } from "react-bootstrap";
 import Market from "./Market";
 
 import { Room } from "../types/room";
 import { Player } from "../types/player";
-import { io, Socket } from "socket.io-client";
+import { Socket } from "socket.io-client";
 import { useSocket } from "../hooks/socket.context";
 
 interface RoomProps {
@@ -59,8 +56,6 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
 
   const onUpdateRoom = useCallback((room: Room) => {
     setRoom(room);
-    console.log(playersRef.current[room.currentTurnIndex]);
-
     setSelectedPlayer(playersRef.current[room.currentTurnIndex]);
   }, []);
 
@@ -128,7 +123,6 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
     socketRef.current?.on("yourTurn", onYourTurn);
     socketRef.current?.on("toggleMarket", onToggleMarket);
 
-
     socketRef.current?.on("lostRound", onToggleLost);
 
     return () => {
@@ -188,6 +182,7 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
       )}
       <>
         <Modal
+          backdrop={"static"}
           show={showErrorModal}
           onHide={() => setShowErrorModal(false)}>
           <Modal.Header>
@@ -208,6 +203,7 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
 
       <>
         <Modal
+          backdrop={"static"}
           show={openMarket}
           onHide={() => {
             toggleMarket();
