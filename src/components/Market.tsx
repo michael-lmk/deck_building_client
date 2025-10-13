@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "../types/card";
 
 interface MarketProps {
-  market: Card[];
+  market: Card[] | undefined;
   onBuy: (cardName: string) => void;
   disabled?: boolean;
 }
@@ -12,16 +12,17 @@ const Market: React.FC<MarketProps> = ({ market, onBuy, disabled }) => {
     <div>
       <h3>Boutique</h3>
       <ul>
-        {market.map((c) => (
-          <li key={c.id}>
-            {c.name} - Popularité: {c.popularity} - Argent: {c.money}
-            <button
-              onClick={() => onBuy(c.name)}
-              disabled={disabled}>
-              Acheter
-            </button>
-          </li>
-        ))}
+        {market &&
+          market.map((c) => (
+            <li key={c.id}>
+              {c.name} - Popularité: {c.popularity} - Argent: {c.money}
+              <button
+                onClick={() => onBuy(c.name)}
+                disabled={disabled}>
+                Acheter
+              </button>
+            </li>
+          ))}
       </ul>
     </div>
   );

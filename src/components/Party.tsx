@@ -31,7 +31,7 @@ const partyAreaStyle: React.CSSProperties = {
   backgroundColor: "#fafafa"
 };
 
-const Party: React.FC<PartyProps> = ({ guests, capacity, disabled }) => {
+const Party: React.FC<PartyProps> = ({ guests, capacity }) => {
   const troubleCount = guests.filter((g) => g.trouble).length;
 
   return (
