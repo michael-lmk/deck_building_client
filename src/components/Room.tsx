@@ -22,6 +22,7 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [room, setRoom] = useState<Room>();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  console.log(room);
 
   const [ready, setReady] = useState(false);
   const [isStart, setIsStart] = useState(false);
@@ -183,8 +184,7 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
       <>
         <Modal
           backdrop={"static"}
-          show={showErrorModal}
-          onHide={() => setShowErrorModal(false)}>
+          show={showErrorModal}>
           <Modal.Header>
             <Modal.Title>Perdu</Modal.Title>
           </Modal.Header>
@@ -204,11 +204,8 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
       <>
         <Modal
           backdrop={"static"}
-          show={openMarket}
-          onHide={() => {
-            toggleMarket();
-          }}>
-          <Modal.Header closeButton>
+          show={openMarket}>
+          <Modal.Header>
             <Modal.Title>Shop</Modal.Title>
           </Modal.Header>
           <Modal.Body>

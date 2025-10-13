@@ -8,6 +8,8 @@ interface MarketProps {
 }
 
 const Market: React.FC<MarketProps> = ({ market, onBuy, disabled }) => {
+  console.log(market);
+  
   return (
     <div>
       <h3>Boutique</h3>
