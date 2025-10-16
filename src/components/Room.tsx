@@ -203,6 +203,7 @@ const RoomScreen: React.FC<RoomProps> = ({ roomId, playerName }) => {
 
       <>
         <Modal
+          fullscreen={true}
           backdrop={"static"}
           show={openMarket}>
           <Modal.Header>

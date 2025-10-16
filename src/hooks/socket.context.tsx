@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-const URL = "https://florida-packets-pick-comparisons.trycloudflare.com";
+const URL = "http://localhost:3005";
 
 interface SocketContextType {
   socket: Socket | null;
