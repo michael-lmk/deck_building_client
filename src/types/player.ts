@@ -6,7 +6,9 @@ export interface Player {
   ready: boolean;
   houseCapacity: number;
   used: Card[];
-  unsed: Card[];
+  unused: Card[];
   deck: Card[];
   discard: Card[];
+  popularity: number;
+  money: number;
 }

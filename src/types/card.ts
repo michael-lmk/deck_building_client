@@ -1,5 +1,6 @@
 export interface Card {
   id: string;
+  card_id: number;
   name: string;
   type: "default" | "guest" | "star";
   cost?: number;
@@ -8,5 +9,5 @@ export interface Card {
   ability?: string;
   trouble: boolean;
   buyable?: boolean;
-  isStar?: boolean;
+  quantity?: number; // Quantity restant dans le shop
 }
